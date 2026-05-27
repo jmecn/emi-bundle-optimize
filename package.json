@@ -1,0 +1,39 @@
+{
+  "name": "emi-bundle-optimize",
+  "version": "0.1.0",
+  "description": "Offline Phase 2b CLI: validate and optimize exported EMI bundles for site/CDN",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "bin": {
+    "emi-bundle-optimize": "./bin/cli.mjs"
+  },
+  "files": [
+    "bin",
+    "src",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "validate": "node bin/cli.mjs validate",
+    "optimize": "node bin/cli.mjs optimize",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "keywords": [
+    "emi",
+    "minecraft",
+    "bundle",
+    "optimize"
+  ],
+  "author": "jmecn",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jmecn/emi-bundle-optimize.git"
+  },
+  "bugs": {
+    "url": "https://github.com/jmecn/emi-bundle-optimize/issues"
+  },
+  "homepage": "https://github.com/jmecn/emi-bundle-optimize#readme"
+}

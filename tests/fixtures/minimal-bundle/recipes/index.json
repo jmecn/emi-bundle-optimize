@@ -1,0 +1,7 @@
+{
+  "recipes": {
+    "test:smoke": {
+      "layout": "recipes/layouts/test-smoke.json"
+    }
+  }
+}

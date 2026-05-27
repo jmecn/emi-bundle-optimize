@@ -1,0 +1,7 @@
+{
+  "schema": 1,
+  "languages": ["en_us"],
+  "defaultLanguage": "en_us",
+  "missingIconId": "fieldguide:missing_icon",
+  "recipeCount": 1
+}
