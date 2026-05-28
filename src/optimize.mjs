@@ -5,6 +5,8 @@ import { fileURLToPath } from 'node:url';
 import { readJson } from './util.mjs';
 import { collectTreeStats, formatBytes } from './stats.mjs';
 import { validateBundle } from './validate.mjs';
+import { compactRecipeIndexIfNeeded } from './compact-recipe-index.mjs';
+import { convertIconAtlasesToWebp } from './webp-icons.mjs';
 
 const packageRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const PACKAGE_VERSION = JSON.parse(
@@ -12,13 +14,23 @@ const PACKAGE_VERSION = JSON.parse(
 ).version;
 
 /**
- * Phase 2b v1: validate raw bundle, copy tree, stamp bundle.json for optimized profile.
- * @param {{ inDir: string, outDir: string, force?: boolean, reportPath?: string }} options
+ * @param {{
+ *   inDir: string,
+ *   outDir: string,
+ *   force?: boolean,
+ *   reportPath?: string,
+ *   webp?: boolean,
+ *   webpQuality?: number,
+ *   keepPng?: boolean,
+ * }} options
  */
-export function optimizeBundle(options) {
+export async function optimizeBundle(options) {
   const inDir = path.resolve(options.inDir);
   const outDir = path.resolve(options.outDir);
   const force = Boolean(options.force);
+  const webp = options.webp !== false;
+  const webpQuality = options.webpQuality ?? 88;
+  const keepPng = Boolean(options.keepPng);
 
   if (inDir === outDir) {
     throw new Error('input and output directories must differ');
@@ -36,12 +48,22 @@ export function optimizeBundle(options) {
     }
   }
 
-  const validation = validateBundle(inDir);
   const inStats = collectTreeStats(inDir);
 
   const startedAt = Date.now();
   fs.mkdirSync(outDir, { recursive: true });
   fs.cpSync(inDir, outDir, { recursive: true, dereference: true });
+
+  const recipeIndexCompacted = compactRecipeIndexIfNeeded(outDir);
+  const validation = validateBundle(outDir);
+
+  let webpResult = null;
+  if (webp) {
+    webpResult = await convertIconAtlasesToWebp(path.join(outDir, 'icons'), {
+      quality: webpQuality,
+      keepPng,
+    });
+  }
 
   const bundlePath = path.join(outDir, 'bundle.json');
   const bundle = readJson(bundlePath);
@@ -49,6 +71,9 @@ export function optimizeBundle(options) {
   bundle.optimizedBy = `emi-bundle-optimize@${PACKAGE_VERSION}`;
   bundle.optimizedFrom = inDir;
   bundle.optimizedAt = new Date().toISOString();
+  if (webp && webpResult?.converted?.length) {
+    bundle.iconAtlases = keepPng ? 'webp+png' : 'webp';
+  }
   fs.writeFileSync(bundlePath, `${JSON.stringify(bundle, null, 2)}\n`, 'utf8');
 
   const outStats = collectTreeStats(outDir);
@@ -57,7 +82,7 @@ export function optimizeBundle(options) {
   const report = {
     tool: 'emi-bundle-optimize',
     version: PACKAGE_VERSION,
-    phase: '2b-v1',
+    phase: webp ? '2b-v2' : '2b-v1',
     input: inDir,
     output: outDir,
     elapsedMs,
@@ -65,6 +90,8 @@ export function optimizeBundle(options) {
     outputStats: outStats,
     recipeCount: validation.recipeCount,
     profile: bundle.profile,
+    recipeIndexCompacted,
+    webp: webpResult,
   };
 
   const defaultReportPath = path.join(outDir, 'optimize-report.json');
@@ -78,10 +105,18 @@ export function printOptimizeOk(result) {
   const { report, reportPath } = result;
   console.log(`OK: optimized bundle -> ${report.output}`);
   console.log(`  profile: ${report.profile}`);
+  console.log(`  phase: ${report.phase}`);
   console.log(`  recipes: ${report.recipeCount}`);
   console.log(
-    `  size: ${formatBytes(report.inputStats.byteCount)} -> ${formatBytes(report.outputStats.byteCount)} (${report.inputStats.fileCount} files)`,
+    `  size: ${formatBytes(report.inputStats.byteCount)} -> ${formatBytes(report.outputStats.byteCount)} (${report.inputStats.fileCount} -> ${report.outputStats.fileCount} files)`,
   );
+  const webp = report.webp?.converted;
+  if (webp?.length) {
+    const saved = webp.reduce((n, entry) => n + (entry.pngBytes - entry.webpBytes), 0);
+    console.log(
+      `  icon atlases: ${webp.length} PNG -> WebP (saved ~${formatBytes(Math.max(0, saved))})`,
+    );
+  }
   console.log(`  elapsed: ${report.elapsedMs} ms`);
   console.log(`  report: ${reportPath}`);
 }

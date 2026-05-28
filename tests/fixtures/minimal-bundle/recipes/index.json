@@ -1,7 +1,5 @@
 {
-  "recipes": {
-    "test:smoke": {
-      "layout": "recipes/layouts/test-smoke.json"
-    }
-  }
+  "schema": 1,
+  "scale": 2,
+  "namespaces": ["test"]
 }

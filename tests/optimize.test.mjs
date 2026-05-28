@@ -12,10 +12,10 @@ const fixtureRoot = path.join(
   'fixtures/minimal-bundle',
 );
 
-test('optimizeBundle copies tree and stamps bundle.json', () => {
+test('optimizeBundle copies tree and stamps bundle.json', async () => {
   const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'emi-opt-out-'));
   try {
-    const { report } = optimizeBundle({ inDir: fixtureRoot, outDir });
+    const { report } = await optimizeBundle({ inDir: fixtureRoot, outDir, webp: false });
     assert.equal(report.profile, 'optimized');
 
     const bundle = JSON.parse(fs.readFileSync(path.join(outDir, 'bundle.json'), 'utf8'));
@@ -25,7 +25,7 @@ test('optimizeBundle copies tree and stamps bundle.json', () => {
     assert.ok(bundle.optimizedAt);
 
     assert.ok(fs.existsSync(path.join(outDir, 'optimize-report.json')));
-    assert.ok(fs.existsSync(path.join(outDir, 'recipes/layouts/test-smoke.json')));
+    assert.ok(fs.existsSync(path.join(outDir, 'recipes/layouts/test_smoke.json')));
   } finally {
     fs.rmSync(outDir, { recursive: true, force: true });
   }

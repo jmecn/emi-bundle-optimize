@@ -9,23 +9,26 @@ const HELP = `emi-bundle-optimize — Phase 2b offline EMI bundle tooling
 
 Usage:
   emi-bundle-optimize validate <bundle-dir>
-  emi-bundle-optimize optimize --in <raw-dir> --out <optimized-dir> [--force]
+  emi-bundle-optimize optimize --in <raw-dir> --out <optimized-dir> [options]
 
 Commands:
   validate   Contract check (same rules as recipe-viewer validate)
-  optimize   v1: copy raw bundle, set bundle.json profile=optimized, write optimize-report.json
+  optimize   Copy bundle, WebP icon atlases (default), stamp bundle.json
 
 Options:
-  --force    Remove existing output directory before optimize
-  --report   Write optimize-report.json to this path (default: <out>/optimize-report.json)
-  -h, --help Show help
+  --force          Remove existing output directory before optimize
+  --no-webp        Skip atlas PNG -> WebP (v1-style copy only)
+  --keep-png       Keep atlas PNG alongside WebP (larger output)
+  --webp-quality   WebP quality 1-100 (default: 88)
+  --report         Write optimize-report.json to this path (default: <out>/optimize-report.json)
+  -h, --help       Show help
 `;
 
 function printHelp() {
   console.log(HELP);
 }
 
-function main() {
+async function main() {
   const argv = process.argv.slice(2);
   if (argv.length === 0 || argv.includes('-h') || argv.includes('--help')) {
     printHelp();
@@ -54,6 +57,10 @@ function main() {
           out: { type: 'string' },
           force: { type: 'boolean', default: false },
           report: { type: 'string' },
+          webp: { type: 'boolean', default: true },
+          'no-webp': { type: 'boolean', default: false },
+          'keep-png': { type: 'boolean', default: false },
+          'webp-quality': { type: 'string', default: '88' },
         },
         allowPositionals: false,
       });
@@ -63,11 +70,20 @@ function main() {
         process.exit(1);
       }
 
-      const result = optimizeBundle({
+      const webpQuality = Number(values['webp-quality']);
+      if (!Number.isFinite(webpQuality) || webpQuality < 1 || webpQuality > 100) {
+        console.error('optimize: --webp-quality must be between 1 and 100');
+        process.exit(1);
+      }
+
+      const result = await optimizeBundle({
         inDir: values.in,
         outDir: values.out,
         force: values.force,
         reportPath: values.report,
+        webp: values.webp && !values['no-webp'],
+        keepPng: values['keep-png'],
+        webpQuality,
       });
       printOptimizeOk(result);
       return;
@@ -86,4 +102,7 @@ function main() {
   }
 }
 
-main();
+main().catch((err) => {
+  console.error(err instanceof Error ? err.message : String(err));
+  process.exit(1);
+});

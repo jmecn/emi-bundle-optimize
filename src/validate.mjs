@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { assertFile, fail, readJson } from './util.mjs';
+import { layoutPathForRecipeId, readRecipeIds } from './recipe-index.mjs';
 
 /**
  * Contract check aligned with recipe-viewer/scripts/validate-bundle.mjs.
@@ -23,16 +24,10 @@ export function validateBundle(bundleRoot) {
     fail('bundle.json missing required field: missingIconId');
   }
 
-  const recipeIndex = readJson(path.join(root, 'recipes/index.json'));
-  const recipes = recipeIndex.recipes;
-  if (!recipes || typeof recipes !== 'object') fail('recipes/index.json missing recipes map');
-
-  const recipeIds = Object.keys(recipes);
-  if (recipeIds.length === 0) fail('recipes/index.json has zero recipes');
+  const { recipeIds } = readRecipeIds(root);
 
   for (const id of recipeIds) {
-    const layout = recipes[id]?.layout;
-    if (!layout) fail(`recipes/index.json entry missing layout: ${id}`);
+    const layout = layoutPathForRecipeId(id);
     if (layout.startsWith('emi/')) {
       fail(`layout path must be bundle-relative (recipes/layouts/...), not export-root path: ${id} -> ${layout}`);
     }
@@ -44,8 +39,32 @@ export function validateBundle(bundleRoot) {
 
   assertFile(root, 'textures/manifest.json');
   assertFile(root, 'icons/index.json');
-  assertFile(root, 'icons/icons.css');
-  assertFile(root, 'tags/members.json');
+  const iconCssPath = path.join(root, 'icons/icons.css');
+  if (!fs.existsSync(iconCssPath)) {
+    const icons = readJson(path.join(root, 'icons/index.json'));
+    const hasInlineAtlas = Object.values(icons?.items || {}).some((entry) => (
+      entry
+      && typeof entry === 'object'
+      && Number.isInteger(entry.page)
+      && Number.isFinite(entry.x)
+      && Number.isFinite(entry.y)
+    ));
+    if (!hasInlineAtlas) {
+      fail('icons/icons.css missing and icons/index.json has no inline atlas coordinates');
+    }
+  }
+  const tagsIndexPath = path.join(root, 'tags/index.json');
+  if (fs.existsSync(tagsIndexPath)) {
+    const tagsIndex = readJson(tagsIndexPath);
+    if (tagsIndex.schema !== 1) fail(`tags/index.json schema expected 1, got ${tagsIndex.schema}`);
+    for (const type of ['items', 'blocks', 'fluids']) {
+      const list = tagsIndex[type];
+      if (list == null) continue;
+      if (!Array.isArray(list)) {
+        fail(`tags/index.json "${type}" must be array`);
+      }
+    }
+  }
   assertFile(root, `lang/${bundle.defaultLanguage || 'en_us'}.json`);
   assertFile(root, 'items/index.json');
 
