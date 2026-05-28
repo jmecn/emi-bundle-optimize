@@ -30,3 +30,61 @@ test('optimizeBundle copies tree and stamps bundle.json', async () => {
     fs.rmSync(outDir, { recursive: true, force: true });
   }
 });
+
+test('optimizeBundle dryRun writes no files', async () => {
+  const outDir = path.join(os.tmpdir(), `emi-opt-dry-run-${Date.now()}`);
+  const result = await optimizeBundle({
+    inDir: fixtureRoot,
+    outDir,
+    dryRun: true,
+    webp: true,
+    webpQuality: 77,
+  });
+  assert.equal(result.report.dryRun, true);
+  assert.equal(result.reportPath, null);
+  assert.equal(result.report.webp.quality, 77);
+  assert.equal(fs.existsSync(outDir), false);
+  assert.equal(result.report.recipeCount, 1);
+});
+
+test('optimizeBundle pruneLang keeps only used keys', async () => {
+  const tempIn = fs.mkdtempSync(path.join(os.tmpdir(), 'emi-lang-prune-in-'));
+  const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'emi-lang-prune-out-'));
+  try {
+    fs.cpSync(fixtureRoot, tempIn, { recursive: true, dereference: true });
+    const langPath = path.join(tempIn, 'lang/en_us.json');
+    fs.writeFileSync(langPath, `${JSON.stringify({
+      'item.test.smoke': 'Smoke Item',
+      'item.test.unused': 'Unused Item',
+      'tag.item.minecraft.logs': 'Logs',
+      'text.unused': 'Unused',
+    }, null, 2)}\n`, 'utf8');
+    fs.writeFileSync(path.join(tempIn, 'items/index.json'), `${JSON.stringify({
+      schema: 1,
+      test: ['smoke'],
+    }, null, 2)}\n`, 'utf8');
+    fs.writeFileSync(path.join(tempIn, 'tags/index.json'), `${JSON.stringify({
+      schema: 1,
+      items: ['minecraft:logs'],
+      blocks: [],
+      fluids: [],
+    }, null, 2)}\n`, 'utf8');
+
+    const { report } = await optimizeBundle({
+      inDir: tempIn,
+      outDir,
+      webp: false,
+      pruneLang: true,
+    });
+    assert.equal(report.lang.enabled, true);
+    assert.equal(report.lang.totalRemovedKeys, 2);
+    const pruned = JSON.parse(fs.readFileSync(path.join(outDir, 'lang/en_us.json'), 'utf8'));
+    assert.equal(pruned['item.test.smoke'], 'Smoke Item');
+    assert.equal(pruned['tag.item.minecraft.logs'], 'Logs');
+    assert.equal(pruned['item.test.unused'], undefined);
+    assert.equal(pruned['text.unused'], undefined);
+  } finally {
+    fs.rmSync(tempIn, { recursive: true, force: true });
+    fs.rmSync(outDir, { recursive: true, force: true });
+  }
+});

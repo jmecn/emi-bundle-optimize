@@ -7,6 +7,7 @@ import { collectTreeStats, formatBytes } from './stats.mjs';
 import { validateBundle } from './validate.mjs';
 import { compactRecipeIndexIfNeeded } from './compact-recipe-index.mjs';
 import { convertIconAtlasesToWebp } from './webp-icons.mjs';
+import { pruneLangFiles } from './lang-prune.mjs';
 
 const packageRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const PACKAGE_VERSION = JSON.parse(
@@ -22,6 +23,8 @@ const PACKAGE_VERSION = JSON.parse(
  *   webp?: boolean,
  *   webpQuality?: number,
  *   keepPng?: boolean,
+ *   dryRun?: boolean,
+ *   pruneLang?: boolean,
  * }} options
  */
 export async function optimizeBundle(options) {
@@ -31,9 +34,34 @@ export async function optimizeBundle(options) {
   const webp = options.webp !== false;
   const webpQuality = options.webpQuality ?? 88;
   const keepPng = Boolean(options.keepPng);
+  const dryRun = Boolean(options.dryRun);
+  const pruneLang = Boolean(options.pruneLang);
 
   if (inDir === outDir) {
     throw new Error('input and output directories must differ');
+  }
+
+  const inStats = collectTreeStats(inDir);
+  if (dryRun) {
+    const validation = validateBundle(inDir);
+    const lang = pruneLang ? pruneLangFiles(inDir, { write: false }) : null;
+    const report = {
+      tool: 'emi-bundle-optimize',
+      version: PACKAGE_VERSION,
+      phase: webp ? '2b-v2' : '2b-v1',
+      dryRun: true,
+      input: inDir,
+      output: outDir,
+      elapsedMs: 0,
+      inputStats: inStats,
+      outputStats: inStats,
+      recipeCount: validation.recipeCount,
+      profile: 'raw',
+      recipeIndexCompacted: false,
+      webp: webp ? { skipped: true, converted: [], quality: webpQuality, keepPng } : null,
+      lang,
+    };
+    return { report, reportPath: null, validation };
   }
 
   if (fs.existsSync(outDir)) {
@@ -47,8 +75,6 @@ export async function optimizeBundle(options) {
       fs.rmSync(outDir, { recursive: true, force: true });
     }
   }
-
-  const inStats = collectTreeStats(inDir);
 
   const startedAt = Date.now();
   fs.mkdirSync(outDir, { recursive: true });
@@ -64,6 +90,7 @@ export async function optimizeBundle(options) {
       keepPng,
     });
   }
+  const langResult = pruneLang ? pruneLangFiles(outDir, { write: true }) : null;
 
   const bundlePath = path.join(outDir, 'bundle.json');
   const bundle = readJson(bundlePath);
@@ -92,6 +119,7 @@ export async function optimizeBundle(options) {
     profile: bundle.profile,
     recipeIndexCompacted,
     webp: webpResult,
+    lang: langResult,
   };
 
   const defaultReportPath = path.join(outDir, 'optimize-report.json');
@@ -103,6 +131,23 @@ export async function optimizeBundle(options) {
 
 export function printOptimizeOk(result) {
   const { report, reportPath } = result;
+  if (report.dryRun) {
+    console.log(`OK: dry-run validated -> ${report.input}`);
+    console.log(`  phase: ${report.phase}`);
+    console.log(`  recipes: ${report.recipeCount}`);
+    console.log(`  size: ${formatBytes(report.inputStats.byteCount)} (${report.inputStats.fileCount} files)`);
+    if (report.webp) {
+      console.log(`  webp: enabled (quality=${report.webp.quality}, keepPng=${Boolean(report.webp.keepPng)})`);
+    } else {
+      console.log('  webp: disabled');
+    }
+    if (report.lang?.enabled) {
+      console.log(
+        `  lang: ${report.lang.totalKeysBefore} -> ${report.lang.totalKeysAfter} keys (removed ${report.lang.totalRemovedKeys})`,
+      );
+    }
+    return;
+  }
   console.log(`OK: optimized bundle -> ${report.output}`);
   console.log(`  profile: ${report.profile}`);
   console.log(`  phase: ${report.phase}`);
@@ -117,6 +162,11 @@ export function printOptimizeOk(result) {
       `  icon atlases: ${webp.length} PNG -> WebP (saved ~${formatBytes(Math.max(0, saved))})`,
     );
   }
+  if (report.lang?.enabled) {
+    console.log(
+      `  lang keys: ${report.lang.totalKeysBefore} -> ${report.lang.totalKeysAfter} (removed ${report.lang.totalRemovedKeys})`,
+    );
+  }
   console.log(`  elapsed: ${report.elapsedMs} ms`);
-  console.log(`  report: ${reportPath}`);
+  if (reportPath) console.log(`  report: ${reportPath}`);
 }
