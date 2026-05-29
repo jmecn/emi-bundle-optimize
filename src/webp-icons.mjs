@@ -17,17 +17,20 @@ export async function convertIconAtlasesToWebp(iconsDir, options = {}) {
   }
 
   const converted = [];
+  const atlasNames = fs.readdirSync(root).filter((name) => ATLAS_PNG.test(name));
+  const log = options.log ?? (() => {});
+  if (atlasNames.length) log(`[emi-bundle-optimize]   ${atlasNames.length} PNG atlas(es)`);
 
-  for (const name of fs.readdirSync(root)) {
-    if (!ATLAS_PNG.test(name)) continue;
-
+  for (const name of atlasNames) {
     const pngPath = path.join(root, name);
     const webpName = name.replace(/\.png$/i, '.webp');
     const webpPath = path.join(root, webpName);
     const pngBytes = fs.statSync(pngPath).size;
 
+    log(`[emi-bundle-optimize]   ${name} -> WebP ...`);
     await sharp(pngPath).webp({ quality }).toFile(webpPath);
     const webpBytes = fs.statSync(webpPath).size;
+    log(`[emi-bundle-optimize]   ${name}: ${pngBytes} -> ${webpBytes} bytes`);
 
     if (!keepPng) {
       fs.unlinkSync(pngPath);

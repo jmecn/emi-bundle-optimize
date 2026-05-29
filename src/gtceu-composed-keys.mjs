@@ -64,20 +64,33 @@ export function isGtceuComposedNamespace(namespace) {
   return namespace === GTCEU_NAMESPACE;
 }
 
-export function collectComposedItemLangKeys(namespace, path, langTable = null) {
+/**
+ * Scan lang tables once for tagprefix.* keys (avoid O(items × langKeys) during prune).
+ */
+export function buildGtceuPruneContext(langTables = []) {
+  const suffixes = new Set(Object.keys(GTCEU_TAG_PREFIX_PATTERN_OVERRIDES));
+  for (const langTable of langTables) {
+    if (!langTable || typeof langTable !== 'object') continue;
+    for (const key of Object.keys(langTable)) {
+      if (!key.startsWith('tagprefix.')) continue;
+      let rest = key.slice('tagprefix.'.length);
+      if (rest.startsWith('polymer.')) rest = rest.slice('polymer.'.length);
+      if (rest) suffixes.add(rest);
+    }
+  }
+  return { suffixes };
+}
+
+export function collectComposedItemLangKeys(namespace, path, ctx) {
   const keys = new Set();
   if (!isGtceuComposedNamespace(namespace) || !path) return keys;
+  const suffixes = ctx?.suffixes;
+  if (!suffixes?.size) return keys;
 
   if (path.endsWith('_bucket')) {
     keys.add(`item.${namespace}.bucket`);
     keys.add(materialKey(namespace, path.slice(0, -'_bucket'.length)));
     return keys;
-  }
-
-  const suffixes = new Set(Object.keys(GTCEU_TAG_PREFIX_PATTERN_OVERRIDES));
-  const table = langTable && typeof langTable === 'object' ? langTable : {};
-  for (const key of Object.keys(table)) {
-    if (key.startsWith('tagprefix.')) suffixes.add(key.slice('tagprefix.'.length));
   }
 
   for (const langSuffix of suffixes) {
@@ -100,7 +113,7 @@ export function collectComposedFluidLangKeys(namespace, path) {
   return keys;
 }
 
-export function collectGtceuComposedLangKeys(kind, registryId, langTables = []) {
+export function collectGtceuComposedLangKeys(kind, registryId, ctx) {
   const keys = new Set();
   const bare = String(registryId || '').trim();
   const colon = bare.indexOf(':');
@@ -115,10 +128,8 @@ export function collectGtceuComposedLangKeys(kind, registryId, langTables = []) 
     return keys;
   }
   if (kind === 'item' || kind === 'block') {
-    for (const langTable of langTables) {
-      for (const key of collectComposedItemLangKeys(namespace, path, langTable)) {
-        keys.add(key);
-      }
+    for (const key of collectComposedItemLangKeys(namespace, path, ctx)) {
+      keys.add(key);
     }
   }
   return keys;

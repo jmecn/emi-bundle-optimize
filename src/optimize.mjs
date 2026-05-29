@@ -44,6 +44,8 @@ export async function optimizeBundle(options) {
     throw new Error('input and output directories must differ');
   }
 
+  const log = options.log ?? ((msg) => console.log(msg));
+  log('[emi-bundle-optimize] scanning input tree stats ...');
   const inStats = collectTreeStats(inDir);
   const recipeCount = readBundleJson(inDir).recipeCount ?? null;
 
@@ -69,13 +71,29 @@ export async function optimizeBundle(options) {
 
   prepareOutDir(outDir, Boolean(options.force));
   const startedAt = Date.now();
+
+  log(`[emi-bundle-optimize] copy ${inDir} -> ${outDir} ...`);
   fs.mkdirSync(outDir, { recursive: true });
   fs.cpSync(inDir, outDir, { recursive: true, dereference: true });
+  log(`[emi-bundle-optimize] copy done (${Date.now() - startedAt} ms)`);
 
-  const webpResult = webp
-    ? await convertIconAtlasesToWebp(path.join(outDir, 'icons'), { quality: webpQuality, keepPng })
-    : null;
-  const langResult = pruneLang ? pruneLangFiles(outDir, { write: true }) : null;
+  let webpResult = null;
+  if (webp) {
+    log('[emi-bundle-optimize] WebP icon atlases ...');
+    webpResult = await convertIconAtlasesToWebp(path.join(outDir, 'icons'), {
+      quality: webpQuality,
+      keepPng,
+      log,
+    });
+    log(`[emi-bundle-optimize] WebP done (${Date.now() - startedAt} ms)`);
+  }
+
+  let langResult = null;
+  if (pruneLang) {
+    log('[emi-bundle-optimize] lang prune (scan layouts + item index) ...');
+    langResult = pruneLangFiles(outDir, { write: true, log });
+    log(`[emi-bundle-optimize] lang prune done (${Date.now() - startedAt} ms)`);
+  }
 
   const bundle = stampBundle(readBundleJson(outDir), { inDir, webp, webpResult, keepPng });
   writeJson(path.join(outDir, 'bundle.json'), bundle);

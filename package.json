@@ -1,6 +1,6 @@
 {
   "name": "emi-bundle-optimize",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Post-process exported EMI bundles: WebP icon atlases and optional lang key pruning",
   "license": "MIT",
   "type": "module",
