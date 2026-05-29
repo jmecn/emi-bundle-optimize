@@ -36,7 +36,7 @@ export async function optimizeBundle(options) {
   const inDir = path.resolve(options.inDir);
   const outDir = path.resolve(options.outDir);
   const webp = options.webp !== false;
-  const webpQuality = options.webpQuality ?? 88;
+  const webpQuality = options.webpQuality ?? 98;
   const keepPng = Boolean(options.keepPng);
   const pruneLang = Boolean(options.pruneLang);
 

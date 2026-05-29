@@ -32,7 +32,7 @@ Node ≥18.
 | `--prune-lang` | off | Drop unused keys in `lang/*.json` |
 | `--no-webp` | off | Skip PNG→WebP |
 | `--keep-png` | off | Keep PNG after WebP |
-| `--quality` | `95` | WebP quality (1–100) |
+| `--quality` | `98` | WebP quality (1–100) |
 
 ## Lang prune
 

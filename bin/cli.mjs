@@ -24,7 +24,7 @@ Options:
   --no-webp        Skip atlas PNG -> WebP
   --keep-png       Keep atlas PNG alongside WebP
   --quality        WebP quality 1-100 (alias of --webp-quality)
-  --webp-quality   WebP quality 1-100 (default: 95)
+  --webp-quality   WebP quality 1-100 (default: 98)
   --report         Write optimize-report.json to this path (default: <out>/optimize-report.json)
   -h, --help       Show help
 `;
@@ -71,7 +71,7 @@ async function main() {
           'no-webp': { type: 'boolean', default: false },
           'keep-png': { type: 'boolean', default: false },
           quality: { type: 'string' },
-          'webp-quality': { type: 'string', default: '88' },
+          'webp-quality': { type: 'string', default: '98' },
         },
         allowPositionals: false,
       });

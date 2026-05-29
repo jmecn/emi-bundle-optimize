@@ -8,7 +8,7 @@ import { readJson, writeJson } from './util.mjs';
 const ATLAS_PNG = /^atlas-\d+\.png$/i;
 
 export async function convertIconAtlasesToWebp(iconsDir, options = {}) {
-  const quality = options.quality ?? 95;
+  const quality = options.quality ?? 98;
   const keepPng = options.keepPng ?? false;
   const root = path.resolve(iconsDir);
 
