@@ -2,10 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { readJson } from './util.mjs';
+import { readRecipeBundle } from './layouts.mjs';
 import { collectTreeStats, formatBytes } from './stats.mjs';
-import { validateBundle } from './validate.mjs';
-import { compactRecipeIndexIfNeeded } from './compact-recipe-index.mjs';
 import { convertIconAtlasesToWebp } from './webp-icons.mjs';
 import { pruneLangFiles } from './lang-prune.mjs';
 
@@ -42,26 +40,26 @@ export async function optimizeBundle(options) {
   }
 
   const inStats = collectTreeStats(inDir);
+  const inputBundle = readRecipeBundle(inDir);
+  const recipeCount = inputBundle.recipeCount ?? null;
+
   if (dryRun) {
-    const validation = validateBundle(inDir);
     const lang = pruneLang ? pruneLangFiles(inDir, { write: false }) : null;
     const report = {
       tool: 'emi-bundle-optimize',
       version: PACKAGE_VERSION,
-      phase: webp ? '2b-v2' : '2b-v1',
       dryRun: true,
       input: inDir,
       output: outDir,
       elapsedMs: 0,
       inputStats: inStats,
       outputStats: inStats,
-      recipeCount: validation.recipeCount,
+      recipeCount,
       profile: 'raw',
-      recipeIndexCompacted: false,
       webp: webp ? { skipped: true, converted: [], quality: webpQuality, keepPng } : null,
       lang,
     };
-    return { report, reportPath: null, validation };
+    return { report, reportPath: null };
   }
 
   if (fs.existsSync(outDir)) {
@@ -80,9 +78,6 @@ export async function optimizeBundle(options) {
   fs.mkdirSync(outDir, { recursive: true });
   fs.cpSync(inDir, outDir, { recursive: true, dereference: true });
 
-  const recipeIndexCompacted = compactRecipeIndexIfNeeded(outDir);
-  const validation = validateBundle(outDir);
-
   let webpResult = null;
   if (webp) {
     webpResult = await convertIconAtlasesToWebp(path.join(outDir, 'icons'), {
@@ -93,7 +88,7 @@ export async function optimizeBundle(options) {
   const langResult = pruneLang ? pruneLangFiles(outDir, { write: true }) : null;
 
   const bundlePath = path.join(outDir, 'bundle.json');
-  const bundle = readJson(bundlePath);
+  const bundle = readRecipeBundle(outDir);
   bundle.profile = 'optimized';
   bundle.optimizedBy = `emi-bundle-optimize@${PACKAGE_VERSION}`;
   bundle.optimizedFrom = inDir;
@@ -109,15 +104,13 @@ export async function optimizeBundle(options) {
   const report = {
     tool: 'emi-bundle-optimize',
     version: PACKAGE_VERSION,
-    phase: webp ? '2b-v2' : '2b-v1',
     input: inDir,
     output: outDir,
     elapsedMs,
     inputStats: inStats,
     outputStats: outStats,
-    recipeCount: validation.recipeCount,
+    recipeCount: bundle.recipeCount ?? recipeCount,
     profile: bundle.profile,
-    recipeIndexCompacted,
     webp: webpResult,
     lang: langResult,
   };
@@ -126,15 +119,16 @@ export async function optimizeBundle(options) {
   const reportPath = options.reportPath ? path.resolve(options.reportPath) : defaultReportPath;
   fs.writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
 
-  return { report, reportPath, validation };
+  return { report, reportPath };
 }
 
 export function printOptimizeOk(result) {
   const { report, reportPath } = result;
   if (report.dryRun) {
-    console.log(`OK: dry-run validated -> ${report.input}`);
-    console.log(`  phase: ${report.phase}`);
-    console.log(`  recipes: ${report.recipeCount}`);
+    console.log(`OK: dry-run -> ${report.input}`);
+    if (report.recipeCount != null) {
+      console.log(`  recipes: ${report.recipeCount}`);
+    }
     console.log(`  size: ${formatBytes(report.inputStats.byteCount)} (${report.inputStats.fileCount} files)`);
     if (report.webp) {
       console.log(`  webp: enabled (quality=${report.webp.quality}, keepPng=${Boolean(report.webp.keepPng)})`);
@@ -150,8 +144,9 @@ export function printOptimizeOk(result) {
   }
   console.log(`OK: optimized bundle -> ${report.output}`);
   console.log(`  profile: ${report.profile}`);
-  console.log(`  phase: ${report.phase}`);
-  console.log(`  recipes: ${report.recipeCount}`);
+  if (report.recipeCount != null) {
+    console.log(`  recipes: ${report.recipeCount}`);
+  }
   console.log(
     `  size: ${formatBytes(report.inputStats.byteCount)} -> ${formatBytes(report.outputStats.byteCount)} (${report.inputStats.fileCount} -> ${report.outputStats.fileCount} files)`,
   );

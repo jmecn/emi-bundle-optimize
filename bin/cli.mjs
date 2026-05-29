@@ -6,7 +6,7 @@ import { BundleOptimizeError } from '../src/util.mjs';
 import { optimizeBundle, printOptimizeOk } from '../src/optimize.mjs';
 import { printValidationOk, validateBundle } from '../src/validate.mjs';
 
-const HELP = `emi-bundle-optimize — Phase 2b offline EMI bundle tooling
+const HELP = `emi-bundle-optimize — EMI bundle post-process (WebP atlases, lang prune)
 
 Usage:
   emi-bundle-optimize validate <bundle-dir>
@@ -14,12 +14,12 @@ Usage:
   emi-bundle-optimize optimize --in <raw-dir> --dry-run [options]
 
 Commands:
-  validate   Contract check (same rules as recipe-viewer validate)
-  optimize   Copy bundle, WebP icon atlases (default), stamp bundle.json
+  validate   JSON Schema check (emi-recipe-renderer)
+  optimize   Copy bundle, WebP icon atlases (default), optional lang prune
 
 Options:
   --force          Remove existing output directory before optimize
-  --dry-run        Validate and preview optimize settings without writing files
+  --dry-run        Preview optimize settings without writing files
   --prune-lang     Remove unused translation keys from lang/*.json
   --no-webp        Skip atlas PNG -> WebP (v1-style copy only)
   --keep-png       Keep atlas PNG alongside WebP (larger output)

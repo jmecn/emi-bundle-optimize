@@ -69,6 +69,10 @@ test('optimizeBundle pruneLang keeps only used keys', async () => {
       blocks: [],
       fluids: [],
     }, null, 2)}\n`, 'utf8');
+    fs.mkdirSync(path.join(tempIn, 'items/test'), { recursive: true });
+    fs.writeFileSync(path.join(tempIn, 'items/test/smoke.json'), '{}\n', 'utf8');
+    fs.mkdirSync(path.join(tempIn, 'tags/minecraft/items'), { recursive: true });
+    fs.writeFileSync(path.join(tempIn, 'tags/minecraft/items/logs.json'), '{}\n', 'utf8');
 
     const { report } = await optimizeBundle({
       inDir: tempIn,

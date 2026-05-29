@@ -86,7 +86,7 @@ test('optimizeBundle converts atlas when fixture has png', async () => {
     webp: true,
   });
 
-  assert.equal(report.phase, '2b-v2');
+  assert.ok(report.webp?.converted?.length);
   assert.ok(fs.existsSync(path.join(outDir, 'icons/atlas-000.webp')));
   assert.equal(fs.existsSync(path.join(outDir, 'icons/atlas-000.png')), false);
 
