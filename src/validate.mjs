@@ -1,4 +1,4 @@
-import { printValidationOk, validateBundleRoot } from 'emi-recipe-renderer/validate';
+import { validateBundleRoot } from 'emi-recipe-renderer/validate';
 
 import { BundleOptimizeError } from './util.mjs';
 
@@ -23,4 +23,9 @@ export function validateBundle(bundleRoot) {
   };
 }
 
-export { printValidationOk };
+export function printValidationOk(result) {
+  console.log(`OK: ${result.root}`);
+  console.log(`  recipes: ${result.recipeCount}`);
+  console.log(`  languages: ${result.languages.length}`);
+  console.log(`  missingIconId: ${result.missingIconId}`);
+}
