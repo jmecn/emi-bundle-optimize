@@ -1,0 +1,7 @@
+{
+  "schema": 1,
+  "namespace": "test",
+  "routes": {
+    "smoke": 0
+  }
+}

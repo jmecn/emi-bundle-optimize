@@ -25,7 +25,7 @@ test('optimizeBundle copies tree and stamps bundle.json', async () => {
     assert.ok(bundle.optimizedAt);
 
     assert.ok(fs.existsSync(path.join(outDir, 'optimize-report.json')));
-    assert.ok(fs.existsSync(path.join(outDir, 'recipes/layouts/test_smoke.json')));
+    assert.ok(fs.existsSync(path.join(outDir, 'recipes/layout-packs/test/000-def456.json')));
   } finally {
     fs.rmSync(outDir, { recursive: true, force: true });
   }

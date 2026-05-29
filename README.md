@@ -46,6 +46,7 @@ Icon atlas modes:
 - runs contract validation
 - converts `icons/atlas-*.png` to WebP by default (can skip via `--no-webp`)
 - optionally prunes unused translation keys from `lang/*.json` (via `--prune-lang`)
+- **planned**: pack layouts into `recipes/layout-packs/` (`layoutStorage: pack`, default **256 KiB** target per pack; see repo `docs/EMI资源目录与索引协议.md` §5.3.1)
 - writes optimization metadata into `bundle.json`
 - writes `optimize-report.json` (except `--dry-run`)
 

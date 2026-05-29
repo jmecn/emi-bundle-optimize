@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "namespace": "test",
+  "layouts": {
+    "smoke": {
+      "version": 1,
+      "widgets": []
+    }
+  }
+}

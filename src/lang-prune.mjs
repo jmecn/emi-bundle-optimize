@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { layoutPathForRecipeId, readRecipeIds } from './recipe-index.mjs';
+import { forEachLayout } from './recipe-index.mjs';
 import { readJson } from './util.mjs';
 
 function stripRegistryId(id) {
@@ -132,11 +132,9 @@ function collectTagIndexKeys(usedKeys, bundleRoot) {
 
 function collectUsedLangKeys(bundleRoot) {
   const usedKeys = new Set();
-  const { recipeIds } = readRecipeIds(bundleRoot);
-  for (const recipeId of recipeIds) {
-    const layout = readJson(path.join(bundleRoot, layoutPathForRecipeId(recipeId)));
+  forEachLayout(bundleRoot, (layout) => {
     collectLayoutKeys(usedKeys, layout);
-  }
+  });
   collectItemIndexKeys(usedKeys, bundleRoot);
   collectTagIndexKeys(usedKeys, bundleRoot);
   return usedKeys;

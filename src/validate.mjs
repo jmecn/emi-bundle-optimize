@@ -2,10 +2,16 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { assertFile, fail, readJson } from './util.mjs';
-import { layoutPathForRecipeId, readRecipeIds } from './recipe-index.mjs';
+import { readRecipeIds } from './recipe-index.mjs';
+
+const LEGACY_PATHS = [
+  'recipes/index.json',
+  'recipes/shards',
+  'recipes/layouts',
+];
 
 /**
- * Contract check aligned with recipe-viewer/scripts/validate-bundle.mjs.
+ * Contract check aligned with EMI bundle protocol (routes + layout-packs).
  * @param {string} bundleRoot absolute path to EMI bundle root
  * @returns {{ bundle: object, recipeCount: number, languages: string[] }}
  */
@@ -15,26 +21,22 @@ export function validateBundle(bundleRoot) {
     fail(`bundle root does not exist: ${root || '<unset>'}`);
   }
 
-  const bundle = readJson(path.join(root, 'bundle.json'));
-  if (bundle.schema !== 1) fail(`bundle.schema expected 1, got ${bundle.schema}`);
+  for (const rel of LEGACY_PATHS) {
+    if (fs.existsSync(path.join(root, rel))) {
+      fail(`legacy path must not exist: ${rel}`);
+    }
+  }
+
+  const { bundle, recipeIds } = readRecipeIds(root);
+
   if (!Array.isArray(bundle.languages) || bundle.languages.length === 0) {
     fail('bundle.languages must be a non-empty array');
   }
+  if (!bundle.languages.includes('en_us')) {
+    fail('bundle.languages must include en_us');
+  }
   if (!bundle.missingIconId || typeof bundle.missingIconId !== 'string') {
     fail('bundle.json missing required field: missingIconId');
-  }
-
-  const { recipeIds } = readRecipeIds(root);
-
-  for (const id of recipeIds) {
-    const layout = layoutPathForRecipeId(id);
-    if (layout.startsWith('emi/')) {
-      fail(`layout path must be bundle-relative (recipes/layouts/...), not export-root path: ${id} -> ${layout}`);
-    }
-    if (!layout.startsWith('recipes/layouts/')) {
-      fail(`unexpected layout path for ${id}: ${layout}`);
-    }
-    assertFile(root, layout);
   }
 
   assertFile(root, 'textures/manifest.json');
@@ -65,7 +67,8 @@ export function validateBundle(bundleRoot) {
       }
     }
   }
-  assertFile(root, `lang/${bundle.defaultLanguage || 'en_us'}.json`);
+  const fallbackLang = bundle.languages.includes('en_us') ? 'en_us' : bundle.languages[0];
+  assertFile(root, `lang/${fallbackLang}.json`);
   assertFile(root, 'items/index.json');
 
   const icons = readJson(path.join(root, 'icons/index.json'));
@@ -74,7 +77,7 @@ export function validateBundle(bundleRoot) {
   }
 
   if (bundle.recipeCount != null && bundle.recipeCount !== recipeIds.length) {
-    fail(`bundle.recipeCount=${bundle.recipeCount} but index has ${recipeIds.length} recipes`);
+    fail(`bundle.recipeCount=${bundle.recipeCount} but routes have ${recipeIds.length} recipes`);
   }
 
   return {
