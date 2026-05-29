@@ -38,10 +38,14 @@ Node ≥18.
 
 Keeps keys referenced by layouts, `items/index.json`, `categories/index.json` (`nameKey`), and `tags/index.json`.
 
+## Release
+
+Push a tag matching `package.json` (e.g. `v0.3.0`). The [Release workflow](.github/workflows/release.yml) runs tests, creates a GitHub Release, and publishes to npm (`NPM_TOKEN` secret required).
+
 ## Development
 
 ```bash
 npm test
 ```
 
-Requires `emi-recipe-renderer` (local monorepo: `file:../emi-recipe-renderer`).
+Requires `emi-recipe-renderer@0.4.1` (installed automatically as a dependency).
