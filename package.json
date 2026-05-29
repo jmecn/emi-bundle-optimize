@@ -1,6 +1,6 @@
 {
   "name": "emi-bundle-optimize",
-  "version": "0.2.0",
+  "version": "0.1.0",
   "description": "Offline Phase 2b CLI: validate and optimize exported EMI bundles for site/CDN",
   "license": "MIT",
   "type": "module",
@@ -22,7 +22,8 @@
   "scripts": {
     "validate": "node bin/cli.mjs validate",
     "optimize": "node bin/cli.mjs optimize",
-    "test": "node --test tests/*.test.mjs"
+    "test": "node --test tests/*.test.mjs",
+    "prepublishOnly": "npm test"
   },
   "keywords": [
     "emi",

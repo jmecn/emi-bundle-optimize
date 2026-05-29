@@ -63,3 +63,34 @@ Icon atlas modes:
 | `--quality` | number | `88` | WebP quality (`1-100`), alias of `--webp-quality` |
 | `--webp-quality` | number | `88` | WebP quality (`1-100`) |
 | `--report` | string | `<out>/optimize-report.json` | Custom path for optimization report JSON |
+
+## npm package
+
+Install as a CLI dependency (same pattern as [emi-recipe-renderer](https://github.com/jmecn/emi-recipe-renderer)):
+
+```bash
+npm install emi-bundle-optimize@0.1.0
+npx emi-bundle-optimize optimize --in ./export-raw/emi --out ./export-opt --force --prune-lang
+```
+
+Published files: `bin/`, `src/`, `LICENSE`, `README.md` (see `package.json` `files`).
+
+## Development
+
+- Node `>=18`
+- Test: `npm test`
+- `npm publish` runs `prepublishOnly` (`npm test`) before upload
+- GitHub Actions **Publish npm package** runs on **Release published** and uses the release tag (for example `v0.1.0`); it skips if that version already exists on npm
+- CI (`ci.yml`) runs on push/PR to `master` / `main`
+
+## Release checklist
+
+1. Merge changes into `master`.
+2. Bump `package.json` `version` on `master` (must be a new version on npm).
+3. Local sanity check:
+   - `npm ci`
+   - `npm test`
+4. Commit, push `master`, then create and push a matching tag (example: `v0.1.0` for version `0.1.0`).
+5. On GitHub: **Releases → Draft a new release** → choose that tag → **Publish release**.
+6. Wait for the **Publish npm package** workflow to finish (requires repo secret `NPM_TOKEN` with publish access).
+7. Verify: `npm view emi-bundle-optimize version`
