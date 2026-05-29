@@ -1,5 +1,4 @@
 import fs from 'node:fs';
-import path from 'node:path';
 
 export class BundleOptimizeError extends Error {
   constructor(message) {
@@ -20,9 +19,6 @@ export function readJson(filePath) {
   }
 }
 
-export function assertFile(bundleRoot, rel) {
-  const abs = path.join(bundleRoot, rel);
-  if (!fs.existsSync(abs)) {
-    fail(`missing file: ${rel} (under ${bundleRoot})`);
-  }
+export function writeJson(filePath, data) {
+  fs.writeFileSync(filePath, `${JSON.stringify(data, null, 2)}\n`, 'utf8');
 }

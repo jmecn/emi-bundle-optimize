@@ -3,16 +3,12 @@ import path from 'node:path';
 
 import sharp from 'sharp';
 
-import { readJson } from './util.mjs';
+import { readJson, writeJson } from './util.mjs';
 
 const ATLAS_PNG = /^atlas-\d+\.png$/i;
 
-/**
- * @param {string} iconsDir
- * @param {{ quality?: number, keepPng?: boolean }} options
- */
 export async function convertIconAtlasesToWebp(iconsDir, options = {}) {
-  const quality = options.quality ?? 88;
+  const quality = options.quality ?? 95;
   const keepPng = options.keepPng ?? false;
   const root = path.resolve(iconsDir);
 
@@ -20,7 +16,6 @@ export async function convertIconAtlasesToWebp(iconsDir, options = {}) {
     return { converted: [], skipped: true };
   }
 
-  /** @type {{ from: string, to: string, pngBytes: number, webpBytes: number }[]} */
   const converted = [];
 
   for (const name of fs.readdirSync(root)) {
@@ -73,7 +68,7 @@ function rewriteIconsIndex(iconsDir, converted, keepPng) {
   if (!Array.isArray(index.pages)) return;
 
   index.pages = index.pages.map((page) => rewriteIconPage(page, byPng, keepPng));
-  fs.writeFileSync(indexPath, `${JSON.stringify(index, null, 2)}\n`, 'utf8');
+  writeJson(indexPath, index);
 }
 
 function rewriteIconPage(page, byPng, keepPng) {

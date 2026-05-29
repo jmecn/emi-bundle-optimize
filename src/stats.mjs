@@ -1,10 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-/**
- * @param {string} root
- * @returns {{ fileCount: number, byteCount: number }}
- */
 export function collectTreeStats(root) {
   let fileCount = 0;
   let byteCount = 0;

@@ -15,8 +15,9 @@ const fixtureRoot = path.join(
 
 test('validateBundle accepts minimal fixture', () => {
   const result = validateBundle(fixtureRoot);
-  assert.equal(result.recipeCount, 1);
-  assert.equal(result.missingIconId, 'fieldguide:missing_icon');
+  assert.equal(result.recipeIds.length, 1);
+  assert.equal(result.recipeIds[0], 'test:smoke');
+  assert.equal(result.bundle.missingIconId, 'fieldguide:missing_icon');
 });
 
 test('validateBundle rejects missing root', () => {

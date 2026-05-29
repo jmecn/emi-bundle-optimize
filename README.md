@@ -5,7 +5,7 @@ Post-process [minecraft-web-export](https://github.com/jmecn/minecraft-web-expor
 Schema validation is delegated to [emi-recipe-renderer](https://github.com/jmecn/emi-recipe-renderer) (`validate` command).
 
 ```bash
-npm install emi-bundle-optimize emi-recipe-renderer
+npm install emi-bundle-optimize
 npx emi-bundle-optimize validate ./emi
 npx emi-bundle-optimize optimize --in ./emi-raw --out ./emi-opt --force --prune-lang
 ```
@@ -32,7 +32,7 @@ Node ≥18.
 | `--prune-lang` | off | Drop unused keys in `lang/*.json` |
 | `--no-webp` | off | Skip PNG→WebP |
 | `--keep-png` | off | Keep PNG after WebP |
-| `--quality` | `88` | WebP quality (1–100) |
+| `--quality` | `95` | WebP quality (1–100) |
 
 ## Lang prune
 

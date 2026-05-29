@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { forEachLayout } from './layouts.mjs';
-import { readJson } from './util.mjs';
+import { readJson, writeJson } from './util.mjs';
 
 function stripRegistryId(id) {
   if (!id) return '';
@@ -191,8 +191,8 @@ export function pruneLangFiles(bundleRoot, options = {}) {
     const afterEntries = Object.keys(pruned).length;
     totalKeysAfter += afterEntries;
     totalBytesAfter += Buffer.byteLength(nextText, 'utf8');
-    totalRemovedKeys += (beforeEntries.length - afterEntries);
-    if (write) fs.writeFileSync(filePath, nextText, 'utf8');
+    totalRemovedKeys += beforeEntries.length - afterEntries;
+    if (write) writeJson(filePath, pruned);
     files.push({
       locale: name.replace(/\.json$/, ''),
       beforeKeys: beforeEntries.length,

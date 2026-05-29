@@ -2,9 +2,9 @@
 import path from 'node:path';
 import { parseArgs } from 'node:util';
 
-import { BundleOptimizeError } from '../src/util.mjs';
 import { optimizeBundle, printOptimizeOk } from '../src/optimize.mjs';
 import { printValidationOk, validateBundle } from '../src/validate.mjs';
+import { BundleOptimizeError } from '../src/util.mjs';
 
 const HELP = `emi-bundle-optimize — EMI bundle post-process (WebP atlases, lang prune)
 
@@ -21,36 +21,39 @@ Options:
   --force          Remove existing output directory before optimize
   --dry-run        Preview optimize settings without writing files
   --prune-lang     Remove unused translation keys from lang/*.json
-  --no-webp        Skip atlas PNG -> WebP (v1-style copy only)
-  --keep-png       Keep atlas PNG alongside WebP (larger output)
+  --no-webp        Skip atlas PNG -> WebP
+  --keep-png       Keep atlas PNG alongside WebP
   --quality        WebP quality 1-100 (alias of --webp-quality)
-  --webp-quality   WebP quality 1-100 (default: 88)
+  --webp-quality   WebP quality 1-100 (default: 95)
   --report         Write optimize-report.json to this path (default: <out>/optimize-report.json)
   -h, --help       Show help
 `;
 
-function printHelp() {
-  console.log(HELP);
+function exitWithError(err) {
+  const message = err instanceof BundleOptimizeError
+    ? `FAIL: ${err.message}`
+    : (err instanceof Error ? err.message : String(err));
+  console.error(message);
+  process.exit(1);
 }
 
 async function main() {
   const argv = process.argv.slice(2);
   if (argv.length === 0 || argv.includes('-h') || argv.includes('--help')) {
-    printHelp();
+    console.log(HELP);
     process.exit(argv.length === 0 ? 1 : 0);
   }
 
-  const command = argv[0];
-
   try {
+    const command = argv[0];
+
     if (command === 'validate') {
       const bundleDir = argv[1] || process.env.EMI_BUNDLE_ROOT;
       if (!bundleDir) {
         console.error('validate: missing bundle directory (argv[1] or EMI_BUNDLE_ROOT)');
         process.exit(1);
       }
-      const result = validateBundle(bundleDir);
-      printValidationOk(result);
+      printValidationOk(validateBundle(bundleDir));
       return;
     }
 
@@ -78,14 +81,13 @@ async function main() {
         process.exit(1);
       }
 
-      const qualityRaw = values.quality ?? values['webp-quality'];
-      const webpQuality = Number(qualityRaw);
+      const webpQuality = Number(values.quality ?? values['webp-quality']);
       if (!Number.isFinite(webpQuality) || webpQuality < 1 || webpQuality > 100) {
         console.error('optimize: --quality/--webp-quality must be between 1 and 100');
         process.exit(1);
       }
 
-      const result = await optimizeBundle({
+      printOptimizeOk(await optimizeBundle({
         inDir: values.in,
         outDir: values.out || path.join(values.in, '.dry-run'),
         force: values.force,
@@ -95,25 +97,16 @@ async function main() {
         webpQuality,
         dryRun: values['dry-run'],
         pruneLang: values['prune-lang'],
-      });
-      printOptimizeOk(result);
+      }));
       return;
     }
 
     console.error(`unknown command: ${command}`);
-    printHelp();
+    console.log(HELP);
     process.exit(1);
   } catch (err) {
-    if (err instanceof BundleOptimizeError) {
-      console.error(`FAIL: ${err.message}`);
-      process.exit(1);
-    }
-    console.error(err instanceof Error ? err.message : String(err));
-    process.exit(1);
+    exitWithError(err);
   }
 }
 
-main().catch((err) => {
-  console.error(err instanceof Error ? err.message : String(err));
-  process.exit(1);
-});
+main().catch(exitWithError);

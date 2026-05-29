@@ -4,13 +4,12 @@ import { readJson } from './util.mjs';
 
 const LAYOUT_PACKS_DIR = 'recipes/layout-packs';
 
-export function readRecipeBundle(bundleRoot) {
+export function readBundleJson(bundleRoot) {
   return readJson(path.join(bundleRoot, 'bundle.json'));
 }
 
-/** Walk every layout in manifest-listed packs (for lang key collection). */
 export function forEachLayout(bundleRoot, callback) {
-  const bundle = readRecipeBundle(bundleRoot);
+  const bundle = readBundleJson(bundleRoot);
   for (const [ns, mod] of Object.entries(bundle.mods || {})) {
     for (const packRef of mod.packs || []) {
       const packPath = path.join(
