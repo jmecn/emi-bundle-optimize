@@ -92,3 +92,80 @@ test('optimizeBundle pruneLang keeps only used keys', async () => {
     fs.rmSync(outDir, { recursive: true, force: true });
   }
 });
+
+test('optimizeBundle pruneLang keeps GTCEu composed translation keys', async () => {
+  const tempIn = fs.mkdtempSync(path.join(os.tmpdir(), 'emi-lang-prune-gt-'));
+  const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'emi-lang-prune-gt-out-'));
+  try {
+    fs.cpSync(fixtureRoot, tempIn, { recursive: true, dereference: true });
+    fs.writeFileSync(path.join(tempIn, 'lang/zh_cn.json'), `${JSON.stringify({
+      'item.gtceu.bucket': '%s桶',
+      'material.gtceu.liquid_air': '液态空气',
+      'tagprefix.ingot': '%s锭',
+      'material.gtceu.aluminium': '铝',
+      'text.unused': 'Unused',
+    }, null, 2)}\n`, 'utf8');
+    fs.writeFileSync(path.join(tempIn, 'items/index.json'), `${JSON.stringify({
+      schema: 1,
+      gtceu: ['liquid_air_bucket', 'aluminium_ingot'],
+    }, null, 2)}\n`, 'utf8');
+
+    await optimizeBundle({
+      inDir: tempIn,
+      outDir,
+      webp: false,
+      pruneLang: true,
+    });
+
+    const pruned = JSON.parse(fs.readFileSync(path.join(outDir, 'lang/zh_cn.json'), 'utf8'));
+    assert.equal(pruned['item.gtceu.bucket'], '%s桶');
+    assert.equal(pruned['material.gtceu.liquid_air'], '液态空气');
+    assert.equal(pruned['tagprefix.ingot'], '%s锭');
+    assert.equal(pruned['material.gtceu.aluminium'], '铝');
+    assert.equal(pruned['text.unused'], undefined);
+  } finally {
+    fs.rmSync(tempIn, { recursive: true, force: true });
+    fs.rmSync(outDir, { recursive: true, force: true });
+  }
+});
+
+test('optimizeBundle pruneLang keeps GTCEu composed keys only for gtceu namespace', async () => {
+  const tempIn = fs.mkdtempSync(path.join(os.tmpdir(), 'emi-lang-prune-gt-ns-'));
+  const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'emi-lang-prune-gt-ns-out-'));
+  try {
+    fs.cpSync(fixtureRoot, tempIn, { recursive: true, dereference: true });
+    fs.writeFileSync(path.join(tempIn, 'lang/en_us.json'), `${JSON.stringify({
+      'item.gtceu.bucket': '%s Bucket',
+      'material.gtceu.liquid_air': 'Liquid Air',
+      'material.othermod.liquid_air': 'Other Liquid Air',
+      'tagprefix.ingot': '%s Ingot',
+      'material.gtceu.aluminium': 'Aluminium',
+      'material.othermod.aluminium': 'Other Aluminium',
+      'item.othermod.bucket': '%s Bucket Other',
+    }, null, 2)}\n`, 'utf8');
+    fs.writeFileSync(path.join(tempIn, 'items/index.json'), `${JSON.stringify({
+      schema: 1,
+      gtceu: ['liquid_air_bucket', 'aluminium_ingot'],
+      othermod: ['liquid_air_bucket', 'aluminium_ingot'],
+    }, null, 2)}\n`, 'utf8');
+
+    await optimizeBundle({
+      inDir: tempIn,
+      outDir,
+      webp: false,
+      pruneLang: true,
+    });
+
+    const pruned = JSON.parse(fs.readFileSync(path.join(outDir, 'lang/en_us.json'), 'utf8'));
+    assert.equal(pruned['material.gtceu.liquid_air'], 'Liquid Air');
+    assert.equal(pruned['material.gtceu.aluminium'], 'Aluminium');
+    assert.equal(pruned['item.gtceu.bucket'], '%s Bucket');
+    assert.equal(pruned['tagprefix.ingot'], '%s Ingot');
+    assert.equal(pruned['material.othermod.liquid_air'], undefined);
+    assert.equal(pruned['material.othermod.aluminium'], undefined);
+    assert.equal(pruned['item.othermod.bucket'], undefined);
+  } finally {
+    fs.rmSync(tempIn, { recursive: true, force: true });
+    fs.rmSync(outDir, { recursive: true, force: true });
+  }
+});

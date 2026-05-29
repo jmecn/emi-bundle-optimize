@@ -3,6 +3,9 @@ import path from 'node:path';
 
 import { forEachLayout } from './layouts.mjs';
 import { readJson, writeJson } from './util.mjs';
+import {
+  collectGtceuComposedLangKeys,
+} from './gtceu-composed-keys.mjs';
 
 function stripRegistryId(id) {
   if (!id) return '';
@@ -29,9 +32,14 @@ function registryLangKeyCandidates(kind, registryId) {
   return prefixes.map((p) => `${p}.${dotted}`);
 }
 
-function addRegistryKeys(usedKeys, kind, id) {
+function addRegistryKeys(usedKeys, kind, id, langTables = null) {
   for (const key of registryLangKeyCandidates(kind, id)) {
     usedKeys.add(key);
+  }
+  if (langTables) {
+    for (const key of collectGtceuComposedLangKeys(kind, id, langTables)) {
+      usedKeys.add(key);
+    }
   }
 }
 
@@ -43,17 +51,26 @@ function addTagKeys(usedKeys, tagId) {
   usedKeys.add(`tag.fluid.${dotted}`);
 }
 
-function collectFluidFromNbt(usedKeys, nbt) {
+function collectFluidFromNbt(usedKeys, nbt, langTables) {
   if (!nbt || typeof nbt !== 'string') return;
   const match = nbt.match(/FluidName:"([^"]+)"/);
   if (!match) return;
-  addRegistryKeys(usedKeys, 'fluid', match[1]);
+  addRegistryKeys(usedKeys, 'fluid', match[1], langTables);
 }
 
-function collectIngredientKeys(usedKeys, ingredient) {
+function collectLayoutKeys(usedKeys, layout, langTables) {
+  for (const widget of layout?.widgets || []) {
+    if (typeof widget?.translationKey === 'string' && widget.translationKey.length > 0) {
+      usedKeys.add(widget.translationKey);
+    }
+    collectIngredientKeys(usedKeys, widget?.ingredient, langTables);
+  }
+}
+
+function collectIngredientKeys(usedKeys, ingredient, langTables) {
   if (ingredient == null) return;
   if (Array.isArray(ingredient)) {
-    for (const entry of ingredient) collectIngredientKeys(usedKeys, entry);
+    for (const entry of ingredient) collectIngredientKeys(usedKeys, entry, langTables);
     return;
   }
   if (typeof ingredient === 'string') {
@@ -70,42 +87,33 @@ function collectIngredientKeys(usedKeys, ingredient) {
       return;
     }
     if (ingredient.startsWith('item:')) {
-      addRegistryKeys(usedKeys, 'item', ingredient.slice(5));
+      addRegistryKeys(usedKeys, 'item', ingredient.slice(5), langTables);
       return;
     }
     if (ingredient.startsWith('fluid:')) {
       const body = ingredient.slice(6);
       const idx = body.lastIndexOf(':');
       const fluidId = idx > 0 ? body.slice(0, idx) : body;
-      addRegistryKeys(usedKeys, 'fluid', fluidId);
+      addRegistryKeys(usedKeys, 'fluid', fluidId, langTables);
       return;
     }
-    addRegistryKeys(usedKeys, 'item', ingredient);
+    addRegistryKeys(usedKeys, 'item', ingredient, langTables);
     return;
   }
   if (typeof ingredient !== 'object') return;
   if (ingredient.type === 'item' && ingredient.id) {
-    addRegistryKeys(usedKeys, 'item', ingredient.id);
-    collectFluidFromNbt(usedKeys, ingredient.nbt);
+    addRegistryKeys(usedKeys, 'item', ingredient.id, langTables);
+    collectFluidFromNbt(usedKeys, ingredient.nbt, langTables);
     return;
   }
   if (ingredient.type === 'fluid' && ingredient.id) {
-    addRegistryKeys(usedKeys, 'fluid', ingredient.id);
+    addRegistryKeys(usedKeys, 'fluid', ingredient.id, langTables);
     return;
   }
-  if (ingredient.id) addRegistryKeys(usedKeys, 'item', ingredient.id);
+  if (ingredient.id) addRegistryKeys(usedKeys, 'item', ingredient.id, langTables);
 }
 
-function collectLayoutKeys(usedKeys, layout) {
-  for (const widget of layout?.widgets || []) {
-    if (typeof widget?.translationKey === 'string' && widget.translationKey.length > 0) {
-      usedKeys.add(widget.translationKey);
-    }
-    collectIngredientKeys(usedKeys, widget?.ingredient);
-  }
-}
-
-function collectItemIndexKeys(usedKeys, bundleRoot) {
+function collectItemIndexKeys(usedKeys, bundleRoot, langTables) {
   const indexPath = path.join(bundleRoot, 'items/index.json');
   if (!fs.existsSync(indexPath)) return;
   const index = readJson(indexPath);
@@ -114,12 +122,49 @@ function collectItemIndexKeys(usedKeys, bundleRoot) {
     if (ns === 'schema' || !Array.isArray(paths)) continue;
     for (const itemPath of paths) {
       if (typeof itemPath !== 'string' || itemPath.length === 0) continue;
-      addRegistryKeys(usedKeys, 'item', `${ns}:${itemPath}`);
+      addRegistryKeys(usedKeys, 'item', `${ns}:${itemPath}`, langTables);
     }
   }
 }
 
-function collectCategoryManifestKeys(usedKeys, bundleRoot) {
+function readLangTables(bundleRoot) {
+  const langDir = path.join(bundleRoot, 'lang');
+  if (!fs.existsSync(langDir)) return [];
+  const tables = [];
+  for (const name of fs.readdirSync(langDir)) {
+    if (!name.endsWith('.json')) continue;
+    tables.push(readJson(path.join(langDir, name)));
+  }
+  return tables;
+}
+
+function collectFluidIndexKeys(usedKeys, bundleRoot, langTables) {
+  const indexPath = path.join(bundleRoot, 'items/index.json');
+  if (!fs.existsSync(indexPath)) return;
+  const index = readJson(indexPath);
+  if (!index || typeof index !== 'object') return;
+  const fluidPaths = index.fluid;
+  if (!Array.isArray(fluidPaths)) return;
+  for (const fluidPath of fluidPaths) {
+    if (typeof fluidPath !== 'string' || fluidPath.length === 0) continue;
+    const colon = fluidPath.indexOf(':');
+    const ns = colon > 0 ? fluidPath.slice(0, colon) : 'minecraft';
+    const fluidId = colon > 0 ? fluidPath.slice(colon + 1) : fluidPath;
+    addRegistryKeys(usedKeys, 'fluid', `${ns}:${fluidId}`, langTables);
+  }
+}
+
+function emiCategoryLangKey(categoryId) {
+  if (!categoryId) return null;
+  return `emi.category.${String(categoryId).replace(':', '.').replace(/\//g, '.')}`;
+}
+
+function collectLayoutCategoryKeys(usedKeys, layout) {
+  const key = emiCategoryLangKey(layout?.category);
+  if (key) usedKeys.add(key);
+}
+
+function collectCategoryManifestKeys(usedKeys, bundleRoot, langTables) {
   const categoriesPath = path.join(bundleRoot, 'categories/index.json');
   if (!fs.existsSync(categoriesPath)) return;
   const manifest = readJson(categoriesPath);
@@ -127,6 +172,10 @@ function collectCategoryManifestKeys(usedKeys, bundleRoot) {
     if (typeof entry?.nameKey === 'string' && entry.nameKey.length > 0) {
       usedKeys.add(entry.nameKey);
     }
+    const categoryKey = emiCategoryLangKey(entry?.id);
+    if (categoryKey) usedKeys.add(categoryKey);
+    if (entry?.iconItem) addRegistryKeys(usedKeys, 'item', entry.iconItem, langTables);
+    if (entry?.iconKey) addRegistryKeys(usedKeys, 'item', entry.iconKey, langTables);
   }
 }
 
@@ -143,11 +192,14 @@ function collectTagIndexKeys(usedKeys, bundleRoot) {
 
 function collectUsedLangKeys(bundleRoot) {
   const usedKeys = new Set();
+  const langTables = readLangTables(bundleRoot);
   forEachLayout(bundleRoot, (layout) => {
-    collectLayoutKeys(usedKeys, layout);
+    collectLayoutCategoryKeys(usedKeys, layout);
+    collectLayoutKeys(usedKeys, layout, langTables);
   });
-  collectItemIndexKeys(usedKeys, bundleRoot);
-  collectCategoryManifestKeys(usedKeys, bundleRoot);
+  collectItemIndexKeys(usedKeys, bundleRoot, langTables);
+  collectFluidIndexKeys(usedKeys, bundleRoot, langTables);
+  collectCategoryManifestKeys(usedKeys, bundleRoot, langTables);
   collectTagIndexKeys(usedKeys, bundleRoot);
   return usedKeys;
 }
