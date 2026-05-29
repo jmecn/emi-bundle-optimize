@@ -191,6 +191,23 @@ function collectTagIndexKeys(usedKeys, bundleRoot) {
   }
 }
 
+/** GTCEu composed labels need material/tagprefix tables; do not prune them per-item. */
+function isGtceuTranslationKey(key) {
+  return key.startsWith('material.gtceu.')
+    || key.startsWith('tagprefix.')
+    || key === 'item.gtceu.bucket';
+}
+
+/** EMI recipe category tabs (emi.category.*) — keep full locale tables, not only keys seen in layouts. */
+function isEmiCategoryLangKey(key) {
+  return key.startsWith('emi.category.');
+}
+
+function shouldKeepLangKey(key, usedKeys) {
+  if (usedKeys.has(key)) return true;
+  return isGtceuTranslationKey(key) || isEmiCategoryLangKey(key);
+}
+
 function collectUsedLangKeys(bundleRoot) {
   const usedKeys = new Set();
   const langTables = readLangTables(bundleRoot);
@@ -241,7 +258,7 @@ export function pruneLangFiles(bundleRoot, options = {}) {
     totalBytesBefore += Buffer.byteLength(raw, 'utf8');
     const pruned = {};
     for (const [key, value] of beforeEntries) {
-      if (usedKeys.has(key)) pruned[key] = value;
+      if (shouldKeepLangKey(key, usedKeys)) pruned[key] = value;
     }
     const nextText = `${JSON.stringify(pruned, null, 2)}\n`;
     const afterEntries = Object.keys(pruned).length;
