@@ -1,5 +1,4 @@
-import { printValidationOk, validateBundleRoot } from 'emi-recipe-renderer/validate';
-
+import { validateBundleRoot } from 'emi-recipe-renderer/validate';
 import { BundleOptimizeError } from './util.mjs';
 
 /**
