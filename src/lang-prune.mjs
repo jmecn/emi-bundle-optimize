@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { forEachLayout } from './recipe-index.mjs';
+import { forEachLayout } from './layouts.mjs';
 import { readJson } from './util.mjs';
 
 function stripRegistryId(id) {

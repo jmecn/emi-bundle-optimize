@@ -1,7 +1,7 @@
 {
   "name": "emi-bundle-optimize",
-  "version": "0.2.1",
-  "description": "Offline Phase 2b CLI: validate and optimize exported EMI bundles for site/CDN",
+  "version": "0.3.0",
+  "description": "Post-process exported EMI bundles: WebP icon atlases and optional lang key pruning",
   "license": "MIT",
   "type": "module",
   "engines": {
@@ -17,6 +17,7 @@
     "README.md"
   ],
   "dependencies": {
+    "emi-recipe-renderer": "0.4.1",
     "sharp": "^0.34.2"
   },
   "scripts": {
