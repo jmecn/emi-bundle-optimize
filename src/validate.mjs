@@ -70,6 +70,19 @@ export function validateBundle(bundleRoot) {
   const fallbackLang = bundle.languages.includes('en_us') ? 'en_us' : bundle.languages[0];
   assertFile(root, `lang/${fallbackLang}.json`);
   assertFile(root, 'items/index.json');
+  assertFile(root, 'categories/index.json');
+  const categoriesIndex = readJson(path.join(root, 'categories/index.json'));
+  if (categoriesIndex.schema !== 1) {
+    fail(`categories/index.json schema expected 1, got ${categoriesIndex.schema}`);
+  }
+  if (!Array.isArray(categoriesIndex.categories) || categoriesIndex.categories.length === 0) {
+    fail('categories/index.json must contain a non-empty categories array');
+  }
+  for (const entry of categoriesIndex.categories) {
+    if (!entry?.id || typeof entry.id !== 'string') {
+      fail('categories/index.json entries require string id');
+    }
+  }
 
   const icons = readJson(path.join(root, 'icons/index.json'));
   if (!icons.items?.[bundle.missingIconId]) {

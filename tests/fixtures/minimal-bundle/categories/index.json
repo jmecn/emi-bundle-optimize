@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "categories": [
+    {
+      "id": "minecraft:crafting",
+      "order": 0,
+      "nameKey": "emi.category.minecraft.crafting",
+      "iconItem": "minecraft:crafting_table"
+    }
+  ]
+}

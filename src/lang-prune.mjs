@@ -119,6 +119,17 @@ function collectItemIndexKeys(usedKeys, bundleRoot) {
   }
 }
 
+function collectCategoryManifestKeys(usedKeys, bundleRoot) {
+  const categoriesPath = path.join(bundleRoot, 'categories/index.json');
+  if (!fs.existsSync(categoriesPath)) return;
+  const manifest = readJson(categoriesPath);
+  for (const entry of manifest?.categories || []) {
+    if (typeof entry?.nameKey === 'string' && entry.nameKey.length > 0) {
+      usedKeys.add(entry.nameKey);
+    }
+  }
+}
+
 function collectTagIndexKeys(usedKeys, bundleRoot) {
   const tagsIndexPath = path.join(bundleRoot, 'tags/index.json');
   if (!fs.existsSync(tagsIndexPath)) return;
@@ -136,6 +147,7 @@ function collectUsedLangKeys(bundleRoot) {
     collectLayoutKeys(usedKeys, layout);
   });
   collectItemIndexKeys(usedKeys, bundleRoot);
+  collectCategoryManifestKeys(usedKeys, bundleRoot);
   collectTagIndexKeys(usedKeys, bundleRoot);
   return usedKeys;
 }
