@@ -57,6 +57,7 @@ export async function optimizeBundle(options) {
   const inDir = path.resolve(options.inDir);
   const outDir = path.resolve(options.outDir);
   const webp = options.webp !== false;
+  const recipeWebp = webp && options.recipeWebp !== false;
   const webpQuality = options.webpQuality ?? 98;
   const keepPng = Boolean(options.keepPng);
   const pruneLang = Boolean(options.pruneLang);
@@ -84,6 +85,7 @@ export async function optimizeBundle(options) {
         recipeCount,
         profile: 'raw',
         webp: webp ? { skipped: true, converted: [], quality: webpQuality, keepPng } : null,
+        recipeWebp: recipeWebp ? { skipped: true, converted: [] } : { skipped: true, reason: 'disabled' },
         lang: pruneLang ? pruneLangFiles(inDir, { write: false }) : null,
       },
       reportPath: null,
@@ -108,12 +110,17 @@ export async function optimizeBundle(options) {
       keepPng,
       log,
     });
-    log('[emi-bundle-optimize] WebP recipe card images ...');
-    recipeWebpResult = await convertRecipeCardsToWebp(outDir, {
-      quality: webpQuality,
-      keepPng,
-      log,
-    });
+    if (recipeWebp) {
+      log('[emi-bundle-optimize] WebP recipe card images ...');
+      recipeWebpResult = await convertRecipeCardsToWebp(outDir, {
+        quality: webpQuality,
+        keepPng,
+        log,
+      });
+    } else {
+      log('[emi-bundle-optimize] WebP recipe card images skipped (--no-recipe-webp)');
+      recipeWebpResult = { converted: [], skipped: true, reason: 'disabled' };
+    }
     log(`[emi-bundle-optimize] WebP done (${Date.now() - startedAt} ms)`);
   }
 

@@ -12,6 +12,26 @@ const fixtureRoot = path.join(
   'fixtures/minimal-bundle',
 );
 
+test('optimizeBundle --no-recipe-webp keeps recipe PNG', async () => {
+  const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'emi-recipe-webp-skip-out-'));
+  try {
+    const { report } = await optimizeBundle({
+      inDir: fixtureRoot,
+      outDir,
+      webp: true,
+      recipeWebp: false,
+      webpQuality: 90,
+    });
+    const bundle = JSON.parse(fs.readFileSync(path.join(outDir, 'bundle.json'), 'utf8'));
+    assert.equal(bundle.recipeImageFormat, 'png');
+    assert.ok(fs.existsSync(path.join(outDir, 'recipes/test/smoke.png')));
+    assert.equal(fs.existsSync(path.join(outDir, 'recipes/test/smoke.webp')), false);
+    assert.equal(report.recipeWebp?.skipped, true);
+  } finally {
+    fs.rmSync(outDir, { recursive: true, force: true });
+  }
+});
+
 test('optimizeBundle sets recipeImageFormat webp and converts recipe PNG', async () => {
   const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'emi-recipe-webp-out-'));
   try {

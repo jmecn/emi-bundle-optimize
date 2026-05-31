@@ -30,7 +30,8 @@ Node ≥18.
 | `--force` | off | Replace existing `--out` |
 | `--dry-run` | off | Preview WebP/lang settings without writing |
 | `--prune-lang` | off | Drop unused keys in `lang/*.json` |
-| `--no-webp` | off | Skip PNG→WebP (icons and recipe cards stay PNG) |
+| `--no-webp` | off | Skip all PNG→WebP |
+| `--no-recipe-webp` | off | Skip recipe card WebP only (icons still WebP; `recipeImageFormat` stays `png`) |
 | `--keep-png` | off | Keep PNG alongside WebP (bundle still uses `recipeImageFormat: webp` when any recipe was converted) |
 | `--quality` | `98` | WebP quality (1–100) |
 
