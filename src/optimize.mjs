@@ -7,9 +7,25 @@ import { pruneLangFiles } from './lang-prune.mjs';
 import { collectTreeStats, formatBytes } from './stats.mjs';
 import { readJson, writeJson } from './util.mjs';
 import { convertIconAtlasesToWebp } from './webp-icons.mjs';
+import { convertRecipeCardsToWebp } from './webp-recipes.mjs';
 
 const packageRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const PACKAGE_VERSION = readJson(path.join(packageRoot, 'package.json')).version;
+
+const LEGACY_V1_DIRS = [
+  'recipes/routes',
+  'recipes/layout-packs',
+  'chrome',
+];
+
+function stripLegacyV1Artifacts(outDir, log) {
+  for (const rel of LEGACY_V1_DIRS) {
+    const target = path.join(outDir, rel);
+    if (!fs.existsSync(target)) continue;
+    fs.rmSync(target, { recursive: true, force: true });
+    log(`[emi-bundle-optimize] removed legacy ${rel}`);
+  }
+}
 
 function prepareOutDir(outDir, force) {
   if (!fs.existsSync(outDir)) return;
@@ -21,13 +37,18 @@ function prepareOutDir(outDir, force) {
   if (force) fs.rmSync(outDir, { recursive: true, force: true });
 }
 
-function stampBundle(bundle, { inDir, webp, webpResult, keepPng }) {
+function stampBundle(bundle, { inDir, webp, webpResult, recipeWebpResult, keepPng }) {
   bundle.profile = 'optimized';
   bundle.optimizedBy = `emi-bundle-optimize@${PACKAGE_VERSION}`;
   bundle.optimizedFrom = inDir;
   bundle.optimizedAt = new Date().toISOString();
   if (webp && webpResult?.converted?.length) {
     bundle.iconAtlases = keepPng ? 'webp+png' : 'webp';
+  }
+  if (recipeWebpResult?.converted?.length) {
+    bundle.recipeImageFormat = 'webp';
+  } else if (bundle.recipeImageFormat == null) {
+    bundle.recipeImageFormat = 'png';
   }
   return bundle;
 }
@@ -75,12 +96,20 @@ export async function optimizeBundle(options) {
   log(`[emi-bundle-optimize] copy ${inDir} -> ${outDir} ...`);
   fs.mkdirSync(outDir, { recursive: true });
   fs.cpSync(inDir, outDir, { recursive: true, dereference: true });
+  stripLegacyV1Artifacts(outDir, log);
   log(`[emi-bundle-optimize] copy done (${Date.now() - startedAt} ms)`);
 
   let webpResult = null;
+  let recipeWebpResult = null;
   if (webp) {
     log('[emi-bundle-optimize] WebP icon atlases ...');
     webpResult = await convertIconAtlasesToWebp(path.join(outDir, 'icons'), {
+      quality: webpQuality,
+      keepPng,
+      log,
+    });
+    log('[emi-bundle-optimize] WebP recipe card images ...');
+    recipeWebpResult = await convertRecipeCardsToWebp(outDir, {
       quality: webpQuality,
       keepPng,
       log,
@@ -90,12 +119,18 @@ export async function optimizeBundle(options) {
 
   let langResult = null;
   if (pruneLang) {
-    log('[emi-bundle-optimize] lang prune (scan layouts + item index) ...');
+    log('[emi-bundle-optimize] lang prune (scan recipe meta + item index) ...');
     langResult = pruneLangFiles(outDir, { write: true, log });
     log(`[emi-bundle-optimize] lang prune done (${Date.now() - startedAt} ms)`);
   }
 
-  const bundle = stampBundle(readBundleJson(outDir), { inDir, webp, webpResult, keepPng });
+  const bundle = stampBundle(readBundleJson(outDir), {
+    inDir,
+    webp,
+    webpResult,
+    recipeWebpResult,
+    keepPng,
+  });
   writeJson(path.join(outDir, 'bundle.json'), bundle);
 
   const reportPath = options.reportPath
@@ -112,6 +147,7 @@ export async function optimizeBundle(options) {
     recipeCount: bundle.recipeCount ?? recipeCount,
     profile: bundle.profile,
     webp: webpResult,
+    recipeWebp: recipeWebpResult,
     lang: langResult,
   };
   writeJson(reportPath, report);
@@ -156,10 +192,17 @@ export function printOptimizeOk({ report, reportPath }) {
     `  size: ${formatBytes(report.inputStats.byteCount)} -> ${formatBytes(report.outputStats.byteCount)} (${report.inputStats.fileCount} -> ${report.outputStats.fileCount} files)`,
   );
 
-  const converted = report.webp?.converted;
-  if (converted?.length) {
-    const saved = converted.reduce((n, e) => n + (e.pngBytes - e.webpBytes), 0);
-    console.log(`  icon atlases: ${converted.length} PNG -> WebP (saved ~${formatBytes(Math.max(0, saved))})`);
+  const iconConverted = report.webp?.converted;
+  if (iconConverted?.length) {
+    const saved = iconConverted.reduce((n, e) => n + (e.pngBytes - e.webpBytes), 0);
+    console.log(`  icon atlases: ${iconConverted.length} PNG -> WebP (saved ~${formatBytes(Math.max(0, saved))})`);
+  }
+  const recipeConverted = report.recipeWebp?.converted;
+  if (recipeConverted?.length) {
+    const saved = (report.recipeWebp.pngBytes ?? 0) - (report.recipeWebp.webpBytes ?? 0);
+    console.log(
+      `  recipe images: ${recipeConverted.length} PNG -> WebP (saved ~${formatBytes(Math.max(0, saved))})`,
+    );
   }
   logLangSummary(report.lang);
   console.log(`  elapsed: ${report.elapsedMs} ms`);

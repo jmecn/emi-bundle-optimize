@@ -25,7 +25,8 @@ test('optimizeBundle copies tree and stamps bundle.json', async () => {
     assert.ok(bundle.optimizedAt);
 
     assert.ok(fs.existsSync(path.join(outDir, 'optimize-report.json')));
-    assert.ok(fs.existsSync(path.join(outDir, 'recipes/layout-packs/test/000-def456.json')));
+    assert.ok(fs.existsSync(path.join(outDir, 'recipes/test/smoke.json')));
+    assert.equal(fs.existsSync(path.join(outDir, 'recipes/layout-packs')), false);
   } finally {
     fs.rmSync(outDir, { recursive: true, force: true });
   }
@@ -100,7 +101,9 @@ test('optimizeBundle pruneLang keeps GTCEu composed translation keys', async () 
     fs.cpSync(fixtureRoot, tempIn, { recursive: true, dereference: true });
     fs.writeFileSync(path.join(tempIn, 'lang/zh_cn.json'), `${JSON.stringify({
       'item.gtceu.bucket': '%s桶',
+      'gtceu.fluid.liquid_generic': '液态%s',
       'material.gtceu.liquid_air': '液态空气',
+      'material.gtceu.air': '空气',
       'tagprefix.ingot': '%s锭',
       'material.gtceu.aluminium': '铝',
       'text.unused': 'Unused',
@@ -119,6 +122,8 @@ test('optimizeBundle pruneLang keeps GTCEu composed translation keys', async () 
 
     const pruned = JSON.parse(fs.readFileSync(path.join(outDir, 'lang/zh_cn.json'), 'utf8'));
     assert.equal(pruned['item.gtceu.bucket'], '%s桶');
+    assert.equal(pruned['gtceu.fluid.liquid_generic'], '液态%s');
+    assert.equal(pruned['material.gtceu.air'], '空气');
     assert.equal(pruned['material.gtceu.liquid_air'], '液态空气');
     assert.equal(pruned['tagprefix.ingot'], '%s锭');
     assert.equal(pruned['material.gtceu.aluminium'], '铝');

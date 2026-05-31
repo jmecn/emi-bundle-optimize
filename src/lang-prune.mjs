@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { forEachLayout } from './layouts.mjs';
+import { forEachRecipeMeta } from './recipe-meta.mjs';
 import { readJson, writeJson } from './util.mjs';
 import {
   buildGtceuPruneContext,
@@ -65,6 +65,39 @@ function collectLayoutKeys(usedKeys, layout, gtceuCtx) {
       usedKeys.add(widget.translationKey);
     }
     collectIngredientKeys(usedKeys, widget?.ingredient, gtceuCtx);
+  }
+}
+
+function collectInteractionKeys(usedKeys, interaction, gtceuCtx) {
+  if (!interaction || typeof interaction !== 'object') return;
+  const kind = interaction.kind;
+  if (kind === 'item' && interaction.id) {
+    addRegistryKeys(usedKeys, 'item', interaction.id, gtceuCtx);
+    collectFluidFromNbt(usedKeys, interaction.nbt, gtceuCtx);
+    return;
+  }
+  if (kind === 'fluid' && interaction.id) {
+    addRegistryKeys(usedKeys, 'fluid', interaction.id, gtceuCtx);
+    return;
+  }
+  if (kind === 'tag' && interaction.tag) {
+    addTagKeys(usedKeys, interaction.tag);
+    if (interaction.displayId) {
+      addRegistryKeys(usedKeys, 'item', interaction.displayId, gtceuCtx);
+    }
+    return;
+  }
+  if (kind === 'list' && Array.isArray(interaction.entries)) {
+    for (const entry of interaction.entries) {
+      collectInteractionKeys(usedKeys, entry, gtceuCtx);
+    }
+  }
+}
+
+function collectMetaKeys(usedKeys, meta, gtceuCtx) {
+  collectLayoutCategoryKeys(usedKeys, meta);
+  for (const widget of meta?.widgets || []) {
+    collectInteractionKeys(usedKeys, widget?.interaction, gtceuCtx);
   }
 }
 
@@ -191,10 +224,11 @@ function collectTagIndexKeys(usedKeys, bundleRoot) {
   }
 }
 
-/** GTCEu composed labels need material/tagprefix tables; do not prune them per-item. */
+/** GTCEu composed labels: keep material/tagprefix/fluid templates (see emi-recipe-renderer/gtceu-translate.js). */
 function isGtceuTranslationKey(key) {
   return key.startsWith('material.gtceu.')
     || key.startsWith('tagprefix.')
+    || key.startsWith('gtceu.fluid.')
     || key === 'item.gtceu.bucket';
 }
 
@@ -212,9 +246,8 @@ function collectUsedLangKeys(bundleRoot) {
   const usedKeys = new Set();
   const langTables = readLangTables(bundleRoot);
   const gtceuCtx = buildGtceuPruneContext(langTables);
-  forEachLayout(bundleRoot, (layout) => {
-    collectLayoutCategoryKeys(usedKeys, layout);
-    collectLayoutKeys(usedKeys, layout, gtceuCtx);
+  forEachRecipeMeta(bundleRoot, (meta) => {
+    collectMetaKeys(usedKeys, meta, gtceuCtx);
   });
   collectItemIndexKeys(usedKeys, bundleRoot, gtceuCtx);
   collectFluidIndexKeys(usedKeys, bundleRoot, gtceuCtx);

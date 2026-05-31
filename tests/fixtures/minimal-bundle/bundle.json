@@ -1,17 +1,8 @@
 {
-  "schema": 1,
-  "layoutSchema": 2,
-  "scale": 2,
-  "packMaxBytes": 262144,
+  "schema": 2,
+  "imageScale": 2,
+  "recipeImageFormat": "png",
   "languages": ["en_us"],
   "missingIconId": "fieldguide:missing_icon",
-  "recipeCount": 1,
-  "mods": {
-    "test": {
-      "routes": ["000-abc123"],
-      "packs": [
-        { "file": "000-def456", "bytes": 122 }
-      ]
-    }
-  }
+  "recipeCount": 1
 }
