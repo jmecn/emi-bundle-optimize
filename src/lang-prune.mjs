@@ -242,13 +242,14 @@ function shouldKeepLangKey(key, usedKeys) {
   return isGtceuTranslationKey(key) || isEmiCategoryLangKey(key);
 }
 
-function collectUsedLangKeys(bundleRoot) {
+function collectUsedLangKeys(bundleRoot, log) {
   const usedKeys = new Set();
   const langTables = readLangTables(bundleRoot);
   const gtceuCtx = buildGtceuPruneContext(langTables);
   forEachRecipeMeta(bundleRoot, (meta) => {
     collectMetaKeys(usedKeys, meta, gtceuCtx);
-  });
+  }, { log, progressEvery: 10_000, progressLabel: 'lang prune scan' });
+  if (log) log('[emi-bundle-optimize]   lang prune: item index + categories + tags ...');
   collectItemIndexKeys(usedKeys, bundleRoot, gtceuCtx);
   collectFluidIndexKeys(usedKeys, bundleRoot, gtceuCtx);
   collectCategoryManifestKeys(usedKeys, bundleRoot, gtceuCtx);
@@ -273,7 +274,7 @@ export function pruneLangFiles(bundleRoot, options = {}) {
       files: [],
     };
   }
-  const usedKeys = collectUsedLangKeys(bundleRoot);
+  const usedKeys = collectUsedLangKeys(bundleRoot, log);
   log(`[emi-bundle-optimize]   used lang keys: ${usedKeys.size}`);
   const files = [];
   let totalKeysBefore = 0;
@@ -283,6 +284,7 @@ export function pruneLangFiles(bundleRoot, options = {}) {
   let totalRemovedKeys = 0;
   for (const name of fs.readdirSync(langDir)) {
     if (!name.endsWith('.json')) continue;
+    const locale = name.replace(/\.json$/, '');
     const filePath = path.join(langDir, name);
     const raw = fs.readFileSync(filePath, 'utf8');
     const table = readJson(filePath);
@@ -298,9 +300,12 @@ export function pruneLangFiles(bundleRoot, options = {}) {
     totalKeysAfter += afterEntries;
     totalBytesAfter += Buffer.byteLength(nextText, 'utf8');
     totalRemovedKeys += beforeEntries.length - afterEntries;
-    if (write) writeJson(filePath, pruned);
+    if (write) {
+      log(`[emi-bundle-optimize]   lang prune write ${locale}: ${beforeEntries.length} -> ${afterEntries} keys`);
+      writeJson(filePath, pruned);
+    }
     files.push({
-      locale: name.replace(/\.json$/, ''),
+      locale,
       beforeKeys: beforeEntries.length,
       afterKeys: afterEntries,
       beforeBytes: Buffer.byteLength(raw, 'utf8'),

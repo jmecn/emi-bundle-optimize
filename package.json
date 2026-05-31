@@ -1,6 +1,6 @@
 {
   "name": "emi-bundle-optimize",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Post-process exported EMI bundles: WebP icon atlases and optional lang key pruning",
   "license": "MIT",
   "type": "module",
@@ -17,7 +17,8 @@
     "README.md"
   ],
   "dependencies": {
-    "emi-recipe-renderer": "^0.5.1",
+    "emi-recipe-renderer": "^0.5.2",
+    "pinyin-pro": "^3.27.0",
     "sharp": "^0.34.2"
   },
   "scripts": {

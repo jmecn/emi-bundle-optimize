@@ -39,6 +39,10 @@ Node ≥18.
 
 Keeps keys referenced by recipe meta, `items/index.json`, `categories/index.json` (`nameKey`), and `tags/index.json`. GregTech CEu uses the same composed-lang rules as `emi-recipe-renderer` (`gtceu-translate.js`).
 
+### Items search (`items-search/<locale>.json`)
+
+After lang prune (default optimize path), builds one JSON per bundle language: substring search haystacks for all ids in `items/index.json`. Chinese locales add English names and pinyin (`pinyin-pro`). Disable with `--no-items-search`.
+
 ## Release
 
 Push a tag matching `package.json` (e.g. `v0.4.0`). The [Release workflow](.github/workflows/release.yml) runs tests, creates a GitHub Release, and publishes to npm (`NPM_TOKEN` secret required).
