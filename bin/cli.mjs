@@ -23,7 +23,6 @@ Options:
   --prune-lang     Remove unused translation keys from lang/*.json
   --no-webp        Skip atlas PNG -> WebP
   --no-recipe-webp Skip recipe card PNG -> WebP (bundle keeps recipeImageFormat: png)
-  --no-items-search Skip items-search/<locale>.json generation
   --keep-png       Keep atlas PNG alongside WebP
   --quality        WebP quality 1-100 (alias of --webp-quality)
   --webp-quality   WebP quality 1-100 (default: 98)
@@ -72,7 +71,6 @@ async function main() {
           webp: { type: 'boolean', default: true },
           'no-webp': { type: 'boolean', default: false },
           'no-recipe-webp': { type: 'boolean', default: false },
-          'no-items-search': { type: 'boolean', default: false },
           'keep-png': { type: 'boolean', default: false },
           quality: { type: 'string' },
           'webp-quality': { type: 'string', default: '98' },
@@ -102,7 +100,6 @@ async function main() {
         webpQuality,
         dryRun: values['dry-run'],
         pruneLang: values['prune-lang'],
-        itemsSearch: !values['no-items-search'],
       }));
       return;
     }

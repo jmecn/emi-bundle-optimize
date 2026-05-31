@@ -7,7 +7,6 @@ import { pruneLangFiles } from './lang-prune.mjs';
 import { collectTreeStats, formatBytes } from './stats.mjs';
 import { readJson, writeJson } from './util.mjs';
 import { convertIconAtlasesToWebp } from './webp-icons.mjs';
-import { buildItemsSearchIndexes } from './items-search-index.mjs';
 import { convertRecipeCardsToWebp } from './webp-recipes.mjs';
 
 const packageRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
@@ -132,13 +131,6 @@ export async function optimizeBundle(options) {
     log(`[emi-bundle-optimize] lang prune done (${Date.now() - startedAt} ms)`);
   }
 
-  let itemsSearchResult = null;
-  if (options.itemsSearch !== false) {
-    log('[emi-bundle-optimize] items-search indexes (per locale) ...');
-    itemsSearchResult = buildItemsSearchIndexes(outDir, { log });
-    log(`[emi-bundle-optimize] items-search done (${Date.now() - startedAt} ms)`);
-  }
-
   const bundle = stampBundle(readBundleJson(outDir), {
     inDir,
     webp,
@@ -146,12 +138,6 @@ export async function optimizeBundle(options) {
     recipeWebpResult,
     keepPng,
   });
-  if (itemsSearchResult?.enabled) {
-    bundle.itemsSearch = {
-      dir: itemsSearchResult.dir,
-      locales: itemsSearchResult.locales.map((e) => e.locale),
-    };
-  }
   writeJson(path.join(outDir, 'bundle.json'), bundle);
 
   const reportPath = options.reportPath
@@ -170,7 +156,6 @@ export async function optimizeBundle(options) {
     webp: webpResult,
     recipeWebp: recipeWebpResult,
     lang: langResult,
-    itemsSearch: itemsSearchResult,
   };
   writeJson(reportPath, report);
 

@@ -39,9 +39,7 @@ Node ≥18.
 
 Keeps keys referenced by recipe meta, `items/index.json`, `categories/index.json` (`nameKey`), and `tags/index.json`. GregTech CEu uses the same composed-lang rules as `emi-recipe-renderer` (`gtceu-translate.js`).
 
-### Items search (`items-search/<locale>.json`)
-
-After lang prune (default optimize path), builds one JSON per bundle language: substring search haystacks for all ids in `items/index.json`. Chinese locales add English names and pinyin (`pinyin-pro`). Disable with `--no-items-search`.
+Item search indexes (`items-search/<locale>.json`) are produced by **minecraft-web-export**, not this tool.
 
 ## Release
 
